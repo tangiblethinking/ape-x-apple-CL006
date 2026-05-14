@@ -236,11 +236,11 @@ function SalarySlider({min,max,onChange}:{min:number;max:number;onChange:(min:nu
       <div style={{display:'flex',justifyContent:'space-between',marginBottom:12}}>
         <div style={{textAlign:'center'}}>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(60,60,67,0.6)',marginBottom:4}}>Minimum</div>
-          <div style={{fontSize:18,fontWeight:700,color:'#000000',fontFamily:'DM Serif Display,serif'}}>{fmtSalary(min)}</div>
+          <div style={{fontSize:18,fontWeight:700,color:'#000000',}}>{fmtSalary(min)}</div>
         </div>
         <div style={{textAlign:'center'}}>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(60,60,67,0.6)',marginBottom:4}}>Maximum</div>
-          <div style={{fontSize:18,fontWeight:700,color:'#000000',fontFamily:'DM Serif Display,serif'}}>{fmtSalary(max)}</div>
+          <div style={{fontSize:18,fontWeight:700,color:'#000000',}}>{fmtSalary(max)}</div>
         </div>
       </div>
       <div style={{marginBottom:8}}>
