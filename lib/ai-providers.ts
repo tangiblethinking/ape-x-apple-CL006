@@ -183,7 +183,7 @@ async function callGeminiAPI(
         contents,
         generationConfig: {
           maxOutputTokens: maxTokens,
-          temperature: 0.2,
+          temperature: 0.1, // Lower temp for accurate data extraction
           ...(isJsonTask && {
             responseMimeType: 'application/json',
             responseSchema: GEMINI_JSON_SCHEMA
@@ -277,27 +277,46 @@ async function callGeminiWithFileSearch(
         return { text: '', error: resolveError || 'No Gemini model available' };
       }
 
-      const normalizedFileId = fileId.startsWith('files/') ? fileId : `files/${fileId}`;
+      // FIX: Support base64 data URIs via inlineData instead of fileUri
+      const isBase64 = fileId.startsWith('data:');
+      let filePart: Record<string, unknown>;
 
-      // FIX: Casing changes to camelCase structures required by REST API endpoints
+      if (isBase64) {
+        // Extract MIME type and base64 data from data URI
+        const match = fileId.match(/^data:(.+?);base64,(.+)$/);
+        if (!match) {
+          return { text: '', error: 'Invalid base64 data URI format' };
+        }
+        filePart = {
+          inlineData: {
+            mimeType: match[1],
+            data: match[2]
+          }
+        };
+      } else {
+        // Google Files API reference
+        const normalizedFileId = fileId.startsWith('files/') ? fileId : `files/${fileId}`;
+        filePart = {
+          fileData: {
+            fileUri: `https://generativelanguage.googleapis.com/v1beta/${normalizedFileId}`,
+            mimeType: 'application/pdf',
+          }
+        };
+      }
+
       const body: Record<string, unknown> = {
         contents: [
           {
             role: 'user',
             parts: [
               { text: query },
-              {
-                fileData: {
-                  fileUri: `https://generativelanguage.googleapis.com/v1beta/${normalizedFileId}`,
-                  mimeType: 'application/pdf',
-                },
-              },
+              filePart
             ],
           },
         ],
         generationConfig: {
           maxOutputTokens: maxTokens,
-          temperature: 0.2,
+          temperature: 0.1,
           responseMimeType: 'application/json',
           responseSchema: GEMINI_JSON_SCHEMA
         },
