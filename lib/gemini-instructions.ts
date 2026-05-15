@@ -50,18 +50,19 @@ Output the JSON array only.`;
 
 // ── Profile Extractor ────────────────────────────────────────
 export function getGeminiExtractProfilePrompt(): string {
-  return `TASK: Extract structured profile data from resume text.
+  return `TASK: Extract structured profile data from the provided resume.
 
 Rules:
-- Use only information explicitly present in the resume
-- Missing fields: use "" for strings, [] for arrays, 0 for numbers
-- skills: An array of strings representing key technical or domain skills (REQUIRED)
-- targetTitles: candidate's current role title plus 3-5 logical senior next-step titles
-- linkedinUrl / portfolioUrl: remove https:// and www. prefixes
-- yearsExperience: total years from first to most recent role, as a number string
+- Use only information explicitly present in the document
+- If targetTitles is blank, guess candidate's current role title plus 3 logical senior next-step titles
+- Clean links: For linkedinUrl or portfolioUrl, remove "https://" and "www." prefixes
+- Convert yearsExperience to a total number string based on their job timeline
+- skills: Extract an array of key technical or domain skills (REQUIRED)
 
-Output this JSON object only — no markdown, no explanation:
-{"name":"","email":"","skills":[],"phone":"","linkedinUrl":"","portfolioUrl":"","additionalLinks":[{"title":"","url":""}],"mostRecentRole":"","mostRecentEmployer":"","yearsExperience":"","coreStrengths":"","discipline":"","targetTitles":[],"targetSectors":[],"salaryMin":0,"salaryMax":0}`;
+Return the profile JSON with these fields:
+name, email, skills (array), phone, linkedinUrl, portfolioUrl, additionalLinks (array of objects with title and url), mostRecentRole, mostRecentEmployer, yearsExperience, coreStrengths, discipline, targetTitles (array), targetSectors (array), salaryMin, salaryMax
+
+Return ONLY valid JSON — no markdown, no explanation.`;
 }
 
 // ── Job Analyzer ─────────────────────────────────────────────
