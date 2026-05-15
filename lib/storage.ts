@@ -195,6 +195,8 @@ const UPLOAD_KEYS = {
   COVER: 'uxjb_uploaded_cover',
   RESUME_META: 'uxjb_uploaded_resume_meta',
   COVER_META: 'uxjb_uploaded_cover_meta',
+  RESUME_FILE_DATA: 'uxjb_uploaded_resume_file_data',
+  COVER_FILE_DATA: 'uxjb_uploaded_cover_file_data',
 };
 
 export interface UploadMeta {
@@ -213,6 +215,12 @@ export function setUploadedResume(content: string, meta: UploadMeta) {
   localStorage.setItem(UPLOAD_KEYS.RESUME, content);
   localStorage.setItem(UPLOAD_KEYS.RESUME_META, JSON.stringify(meta));
 }
+export function getUploadedResumeFileData(): string {
+  return safe(() => localStorage.getItem(UPLOAD_KEYS.RESUME_FILE_DATA) || '', '');
+}
+export function setUploadedResumeFileData(dataUri: string) {
+  localStorage.setItem(UPLOAD_KEYS.RESUME_FILE_DATA, dataUri);
+}
 export function getUploadedCover(): string {
   return safe(() => localStorage.getItem(UPLOAD_KEYS.COVER) || '', '');
 }
@@ -222,6 +230,12 @@ export function getUploadedCoverMeta(): UploadMeta | null {
 export function setUploadedCover(content: string, meta: UploadMeta) {
   localStorage.setItem(UPLOAD_KEYS.COVER, content);
   localStorage.setItem(UPLOAD_KEYS.COVER_META, JSON.stringify(meta));
+}
+export function getUploadedCoverFileData(): string {
+  return safe(() => localStorage.getItem(UPLOAD_KEYS.COVER_FILE_DATA) || '', '');
+}
+export function setUploadedCoverFileData(dataUri: string) {
+  localStorage.setItem(UPLOAD_KEYS.COVER_FILE_DATA, dataUri);
 }
 export function clearAllStorage() {
   // Wipe everything — no key list to maintain, nothing left behind
@@ -362,4 +376,3 @@ export function getWizardSeen(): boolean {
 export function setWizardSeen() {
   localStorage.setItem(WIZARD_SEEN_KEY, '1');
 }
-
