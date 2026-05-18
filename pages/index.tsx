@@ -105,7 +105,9 @@ async function parseFileBase64(file: File): Promise<string> {
   const base64 = Buffer.from(arrayBuffer).toString('base64');
   
   console.log('Sending via base64 fallback, size:', base64.length);
-  const response = await fetch('/api/parse-resume-base64', {
+  
+  // Try full parsing first
+  let response = await fetch('/api/parse-resume-base64', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -113,6 +115,19 @@ async function parseFileBase64(file: File): Promise<string> {
       data: base64,
     }),
   });
+
+  // If that fails, try simple parsing (no external libs)
+  if (!response.ok) {
+    console.log('Base64 parsing failed, trying simple parsing...');
+    response = await fetch('/api/parse-simple', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: file.name,
+        data: base64,
+      }),
+    });
+  }
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
