@@ -92,59 +92,53 @@ function fmtSalary(n: number): string {
   return `$${(n/1000).toFixed(0)}K`;
 }
 async function parseFile(file: File): Promise<string> {
+  // For HTML, we can still parse client-side (it's safe and small)
   const ext = file.name.split('.').pop()?.toLowerCase();
-  if (ext==='html'||ext==='htm') return await file.text();
-  if (ext==='docx') {
+  if (ext==='html'||ext==='htm') {
     try {
-      const { default: mammoth } = await import('mammoth');
-      if (!mammoth?.extractRawText) throw new Error('mammoth.extractRawText not available');
-      const buf = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({arrayBuffer:buf});
-      return result.value || '';
+      const html = await file.text();
+      // Strip HTML tags safely
+      return html
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
     } catch (err) {
-      throw new Error(`DOCX parsing failed: ${err instanceof Error ? err.message : 'Unknown error'}. Try uploading as HTML or PDF instead.`);
+      throw new Error(`HTML parsing failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }
-  if (ext==='pdf') {
+
+  // For PDF and DOCX, use backend API (works on all devices)
+  if (ext === 'docx' || ext === 'pdf') {
     try {
-      // pdfjs-dist exports can vary by bundler; try multiple approaches
-      const pdfjsLib = await import('pdfjs-dist');
-      let getDocumentFn = pdfjsLib.getDocument;
-      let GlobalWorkerOptionsFn = pdfjsLib.GlobalWorkerOptions;
-      
-      // Fallback: check if they're under .default (some bundlers)
-      if (!getDocumentFn && pdfjsLib.default) {
-        getDocumentFn = pdfjsLib.default.getDocument;
-        GlobalWorkerOptionsFn = pdfjsLib.default.GlobalWorkerOptions;
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/parse-resume', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error (${response.status})`);
       }
-      
-      // Last resort: try the module itself as pdfjs
-      if (!getDocumentFn) {
-        getDocumentFn = pdfjsLib.getDocument || (pdfjsLib as any).getDocument;
+
+      const data = await response.json();
+      if (!data.text) {
+        throw new Error(data.error || 'No text extracted from file');
       }
-      
-      if (!getDocumentFn || typeof getDocumentFn !== 'function') {
-        throw new Error(`getDocument not found or not a function. Available: ${Object.keys(pdfjsLib).join(', ').substring(0, 100)}`);
-      }
-      
-      if (GlobalWorkerOptionsFn) {
-        GlobalWorkerOptionsFn.workerSrc = '/pdf.worker.min.mjs';
-      }
-      
-      const buf = await file.arrayBuffer();
-      const pdf = await getDocumentFn({data:buf}).promise;
-      let text = '';
-      for (let i=1;i<=pdf.numPages;i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += (content.items as Array<{str?:string}>).map(item=>item.str||'').join(' ')+'\n';
-      }
-      return text;
+
+      return data.text;
     } catch (err) {
-      throw new Error(`PDF parsing failed: ${err instanceof Error ? err.message : 'Unknown error'}. Try uploading as HTML or DOCX instead.`);
+      throw new Error(
+        err instanceof Error 
+          ? err.message 
+          : `Resume parsing failed. Try uploading as HTML or a different file.`
+      );
     }
   }
-  throw new Error('Unsupported file type. Use HTML, DOCX, or text-based PDF.');
+
+  throw new Error('Unsupported file type. Use HTML, DOCX, or PDF.');
 }
 
 async function fileToDataUri(file: File): Promise<string> {
