@@ -92,6 +92,20 @@ function fmtSalary(n: number): string {
   return `$${(n/1000).toFixed(0)}K`;
 }
 async function parseFile(file: File): Promise<string> {
+  // Browser detection for debugging
+  const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+  const isFirefox = /Firefox/.test(navigator.userAgent);
+  const isChrome = /Chrome/.test(navigator.userAgent);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  const browserInfo = `${isIOS ? 'iOS' : isAndroid ? 'Android' : 'Desktop'} ${isSafari ? 'Safari' : isFirefox ? 'Firefox' : isChrome ? 'Chrome' : 'Unknown'}`;
+  
+  console.log('=== parseFile Debug ===');
+  console.log('Browser:', browserInfo);
+  console.log('File name:', file.name);
+  console.log('File type:', file.type);
+  console.log('File size:', file.size);
+  
   // For HTML, we can still parse client-side (it's safe and small)
   const ext = file.name.split('.').pop()?.toLowerCase();
   if (ext==='html'||ext==='htm') {
@@ -110,31 +124,47 @@ async function parseFile(file: File): Promise<string> {
   // For PDF and DOCX, use backend API (works on all devices)
   if (ext === 'docx' || ext === 'pdf') {
     try {
+      console.log('Creating FormData...');
       const formData = new FormData();
       formData.append('file', file);
+      
+      console.log('FormData created, file appended');
+      console.log('Sending to /api/parse-resume...');
 
       const response = await fetch('/api/parse-resume', {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
+        let errData = {};
+        try {
+          errData = await response.json();
+        } catch (parseErr) {
+          console.error('Failed to parse error response:', parseErr);
+        }
+        console.error('API error response:', errData);
         throw new Error(errData.error || `Server error (${response.status})`);
       }
 
       const data = await response.json();
+      console.log('API response received, text length:', data.text?.length || 0);
+      
       if (!data.text) {
         throw new Error(data.error || 'No text extracted from file');
       }
 
+      console.log('✓ parseFile successful');
       return data.text;
     } catch (err) {
-      throw new Error(
-        err instanceof Error 
-          ? err.message 
-          : `Resume parsing failed. Try uploading as HTML or a different file.`
-      );
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error('✗ parseFile failed:', errMsg);
+      console.error('Browser:', browserInfo);
+      console.error('File:', file.name);
+      throw new Error(errMsg);
     }
   }
 
