@@ -95,24 +95,39 @@ async function parseFile(file: File): Promise<string> {
   const ext = file.name.split('.').pop()?.toLowerCase();
   if (ext==='html'||ext==='htm') return await file.text();
   if (ext==='docx') {
-    const { default: mammoth } = await import('mammoth');
-    const buf = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({arrayBuffer:buf});
-    return result.value;
+    try {
+      const { default: mammoth } = await import('mammoth');
+      if (!mammoth?.extractRawText) throw new Error('mammoth.extractRawText not available');
+      const buf = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({arrayBuffer:buf});
+      return result.value || '';
+    } catch (err) {
+      throw new Error(`DOCX parsing failed: ${err instanceof Error ? err.message : 'Unknown error'}. Try uploading as HTML or PDF instead.`);
+    }
   }
   if (ext==='pdf') {
-    const pdfjsLib = await import('pdfjs-dist');
-    const { getDocument, GlobalWorkerOptions } = pdfjsLib;
-    GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-    const buf = await file.arrayBuffer();
-    const pdf = await getDocument({data:buf}).promise;
-    let text = '';
-    for (let i=1;i<=pdf.numPages;i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      text += (content.items as Array<{str?:string}>).map(item=>item.str||'').join(' ')+'\n';
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      if (!pdfjsLib || !pdfjsLib.getDocument) {
+        throw new Error('pdfjs-dist module not properly loaded');
+      }
+      const { getDocument, GlobalWorkerOptions } = pdfjsLib;
+      if (!getDocument) throw new Error('getDocument not found in pdfjs-dist');
+      if (!GlobalWorkerOptions) throw new Error('GlobalWorkerOptions not found in pdfjs-dist');
+      
+      GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      const buf = await file.arrayBuffer();
+      const pdf = await getDocument({data:buf}).promise;
+      let text = '';
+      for (let i=1;i<=pdf.numPages;i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += (content.items as Array<{str?:string}>).map(item=>item.str||'').join(' ')+'\n';
+      }
+      return text;
+    } catch (err) {
+      throw new Error(`PDF parsing failed: ${err instanceof Error ? err.message : 'Unknown error'}. Try uploading as HTML or DOCX instead.`);
     }
-    return text;
   }
   throw new Error('Unsupported file type. Use HTML, DOCX, or text-based PDF.');
 }
