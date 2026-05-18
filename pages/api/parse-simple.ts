@@ -8,6 +8,14 @@ interface ParseResponse {
   error?: string;
 }
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 function getTempDir(): string {
   const candidates = ['/tmp', os.tmpdir(), path.join(process.cwd(), '.vercel/tmp'), path.join(process.cwd(), 'tmp')];
   for (const dir of candidates) {

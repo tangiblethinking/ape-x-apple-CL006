@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "pages/api/parse-resume.ts": {
+      "maxDuration": 30
+    },
+    "pages/api/parse-resume-base64.ts": {
+      "maxDuration": 30
+    },
+    "pages/api/parse-simple.ts": {
+      "maxDuration": 30
+    }
+  }
+}

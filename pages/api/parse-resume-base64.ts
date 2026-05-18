@@ -9,6 +9,14 @@ interface ParseResponse {
   details?: string;
 }
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 function getTempDir(): string {
   const candidates = ['/tmp', os.tmpdir(), path.join(process.cwd(), '.vercel/tmp'), path.join(process.cwd(), 'tmp')];
   for (const dir of candidates) {
@@ -41,14 +49,20 @@ async function parseDocx(filePath: string): Promise<string> {
 async function parsePdf(filePath: string): Promise<string> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { PDFParse } = require('pdf-parse');
+    const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
     const fileBuffer = fs.readFileSync(filePath);
     if (!fileBuffer || fileBuffer.length === 0) throw new Error('PDF file is empty');
-    const parser = new PDFParse({ data: fileBuffer });
-    const result = await parser.getText();
-    if (!result || !result.text) throw new Error('No text in PDF');
-    await parser.destroy();
-    return result.text.replace(/-- \d+ of \d+ --/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    const data = new Uint8Array(fileBuffer);
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map((item: any) => ('str' in item ? item.str : '')).join(' ') + '\n';
+    }
+    text = text.replace(/\s{3,}/g, '  ').trim();
+    if (!text) throw new Error('No text in PDF - may be image-based or encrypted');
+    return text;
   } catch (err) {
     throw new Error(`PDF: ${err instanceof Error ? err.message : 'Parse error'}`);
   }

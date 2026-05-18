@@ -75,12 +75,12 @@ async function parseDocx(filePath: string): Promise<string> {
 }
 
 /**
- * Parse PDF using pdf-parse
+ * Parse PDF using pdfjs-dist legacy (works in Node.js without DOM APIs)
  */
 async function parsePdf(filePath: string): Promise<string> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { PDFParse } = require('pdf-parse');
+    const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 
     console.log('[parse-resume] Reading PDF file:', filePath);
     const fileBuffer = fs.readFileSync(filePath);
@@ -89,17 +89,28 @@ async function parsePdf(filePath: string): Promise<string> {
     }
 
     console.log('[parse-resume] Parsing PDF buffer, size:', fileBuffer.length);
-    const parser = new PDFParse({ data: fileBuffer });
-    const result = await parser.getText();
-    console.log('[parse-resume] PDF parsed, text length:', result?.text?.length || 0);
+    const data = new Uint8Array(fileBuffer);
+    const loadingTask = pdfjsLib.getDocument({ data });
+    const pdf = await loadingTask.promise;
+    console.log('[parse-resume] PDF loaded, pages:', pdf.numPages);
 
-    if (!result || !result.text) {
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map((item: any) => ('str' in item ? item.str : ''))
+        .join(' ');
+      text += pageText + '\n';
+    }
+
+    text = text.replace(/\s{3,}/g, '  ').trim();
+    console.log('[parse-resume] PDF parsed, text length:', text.length);
+
+    if (!text) {
       throw new Error('No text in PDF - may be image-based or encrypted');
     }
 
-    await parser.destroy();
-    // Strip page markers added by pdf-parse v2
-    const text = result.text.replace(/-- \d+ of \d+ --/g, '').replace(/\n{3,}/g, '\n\n').trim();
     return text;
   } catch (err) {
     console.error('[parse-resume] PDF parsing error:', err);
