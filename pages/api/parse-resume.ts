@@ -82,6 +82,9 @@ async function parsePdf(filePath: string): Promise<string> {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 
+    // Required in Node.js/serverless: disable worker thread (no worker file available)
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+
     console.log('[parse-resume] Reading PDF file:', filePath);
     const fileBuffer = fs.readFileSync(filePath);
     if (!fileBuffer || fileBuffer.length === 0) {
@@ -90,7 +93,12 @@ async function parsePdf(filePath: string): Promise<string> {
 
     console.log('[parse-resume] Parsing PDF buffer, size:', fileBuffer.length);
     const data = new Uint8Array(fileBuffer);
-    const loadingTask = pdfjsLib.getDocument({ data });
+    const loadingTask = pdfjsLib.getDocument({
+      data,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
     const pdf = await loadingTask.promise;
     console.log('[parse-resume] PDF loaded, pages:', pdf.numPages);
 

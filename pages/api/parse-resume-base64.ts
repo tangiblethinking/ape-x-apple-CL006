@@ -50,10 +50,17 @@ async function parsePdf(filePath: string): Promise<string> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+    // Required in Node.js/serverless: disable worker thread
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
     const fileBuffer = fs.readFileSync(filePath);
     if (!fileBuffer || fileBuffer.length === 0) throw new Error('PDF file is empty');
     const data = new Uint8Array(fileBuffer);
-    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    const pdf = await pdfjsLib.getDocument({
+      data,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    }).promise;
     let text = '';
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);

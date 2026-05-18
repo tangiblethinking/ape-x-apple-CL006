@@ -236,7 +236,8 @@ async function parseFile(file: File): Promise<string> {
     try {
       console.log('Creating FormData...');
       const formData = new FormData();
-      formData.append('file', file);
+      // Explicitly pass filename as third arg — iOS Safari can strip or rename it otherwise
+      formData.append('file', file, file.name || 'document.pdf');
       
       console.log('FormData created, file appended');
       console.log('Sending to /api/parse-resume...');
