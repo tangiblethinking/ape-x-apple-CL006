@@ -192,14 +192,14 @@ async function parseFile(file: File): Promise<string> {
       console.log('Response ok:', response.ok);
 
       if (!response.ok) {
-        let errData = {};
+        let errData: any = {};
         try {
           errData = await response.json();
         } catch (parseErr) {
           console.error('Failed to parse error response:', parseErr);
         }
         console.error('API error response:', errData);
-        throw new Error(errData.error || `Server error (${response.status})`);
+        throw new Error(errData?.error || `Server error (${response.status})`);
       }
 
       const data = await response.json();
